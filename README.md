@@ -10,7 +10,7 @@ Usage
 In your `build.sbt` file add following line:
 
 ```scala
-libraryDependencies += "im.dlg" %% "dialog-repost" % "0.0.1-sdk_<YOUR-CURRENT-SDK-VERSION>"
+libraryDependencies += "im.dlg" %% "dialog-repost" % "0.0.2-sdk_<YOUR-CURRENT-SDK-VERSION>"
 ```
 
 Note that `<YOUR-CURRENT-SDK-VERSION>` should be free of `-SNAPSHOT` suffix even if you are
