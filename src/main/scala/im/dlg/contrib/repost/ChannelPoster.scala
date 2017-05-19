@@ -21,8 +21,7 @@ object ChannelPoster {
   trait Poster extends AnyLogging {
     implicit val system: ActorSystem
     protected val channelId: Int
-    protected implicit val mat
-      : Materializer = DialogRuntime(system).materializer
+    protected implicit val mat: Materializer = DialogRuntime(system).materializer
 
     protected implicit val ec: ExecutionContext = system.dispatcher
 
@@ -31,24 +30,15 @@ object ChannelPoster {
     private final val peer = ApiPeer(ApiPeerType.Group, channelId)
     private final val rng = ThreadLocalSecureRandom.current()
 
-    protected def post(userId: Int, msg: ApiMessage): Future[SeqStateDate] =
+    protected def post(userId: Int, msg: ApiMessageContent): Future[SeqStateDate] =
       dialogExt
-        .sendMessage(peer,
-                     userId,
-                     0,
-                     None,
-                     rng.nextLong,
-                     msg,
-                     None,
-                     isFat = false,
-                     Set.empty,
-                     Set.empty,
-                     None)
+        .sendMessage(peer, userId, 0, None, rng.nextLong, msg, None, isFat = false, Set.empty, Set.empty, None)
         .recover {
           case t: Throwable ⇒
             log.error(t, "send message failed")
             throw t
         }
+        .map(_._1)
 
     protected def startStream(key: String, info: Group): Unit
 
@@ -56,10 +46,9 @@ object ChannelPoster {
       db.run(GroupRepo.find(channelId)).foreach {
         case Some(info) ⇒
           startStream(key, info)
-          log.warning("Started stream for `{}` to `{}`", key, info.id)
+          log.debug("Started stream for `{}` to `{}`", key, info.id)
         case None ⇒
-          throw new RuntimeException(
-            s"Can't find channel with id = $channelId")
+          throw new RuntimeException(s"Can't find channel with id = $channelId")
       }
   }
 
@@ -68,13 +57,10 @@ object ChannelPoster {
 
     final def configPath: String = s"services.poster.$name"
 
-    final def start(system: ActorSystem)(
-        implicit ev: Configs[ConfigType]): Unit =
+    final def start(system: ActorSystem)(implicit ev: Configs[ConfigType]): Unit =
       if (system.settings.config.hasPath(configPath)) {
-        val config = system.settings.config
-          .get[ConfigType](configPath)
-          .valueOrThrow(_.configException)
-        system.log.warning("Poster for {} config: {}", name, config)
+        val config = system.settings.config.get[ConfigType](configPath).valueOrThrow(_.configException)
+        system.log.debug("Poster for {} config: {}", name, config)
         startWithConfig(config)(system)
       }
 

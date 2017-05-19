@@ -93,8 +93,7 @@ trait TwitterSupport extends AnyLogging {
   }
 }
 
-final case class TwitterHub(config: TwitterConfig)(
-    implicit val system: ActorSystem)
+final case class TwitterHub(config: TwitterConfig)(implicit val system: ActorSystem)
     extends TwitterSupport
     with AnyLogging {
 
@@ -119,18 +118,8 @@ final case class TwitterHub(config: TwitterConfig)(
     Flow[(ApiPeer, ApiTextMessage)].mapAsync(1) {
       case (peer, msg) ⇒
         dialogExt
-          .sendMessage(peer,
-                       0,
-                       0,
-                       None,
-                       rng.nextLong,
-                       msg,
-                       None,
-                       isFat = false,
-                       Set.empty,
-                       Set.empty,
-                       None)
-          .map(_ => ())
+          .sendMessage(peer, 0, 0, None, rng.nextLong, msg, None, isFat = false, Set.empty, Set.empty, None)
+          .map(_ ⇒ ())
           .recover {
             case t: Throwable ⇒
               log.error(t, "send message failed")
@@ -139,28 +128,24 @@ final case class TwitterHub(config: TwitterConfig)(
     }
 
   private def unfoldMedia(key: Key) =
-    Flow[Status]
-      .flatMapConcat { status ⇒
-        Source
-          .fromIterator(() ⇒
+    Flow[Status].flatMapConcat { status ⇒
+      Source
+        .fromIterator(() ⇒
             status.getMediaEntities.toIterator.map { media ⇒
-              ApiTextMessage(media.getMediaURLHttps,
-                             IndexedSeq.empty,
-                             None,
-                             None,
-                             IndexedSeq.empty)
-          })
-          .prepend(Source.single(ApiTextMessage(
-            if (key.quotationRequired)
-              s"@${status.getUser.getName}:\n${status.getText.split('\n').map("> " + _).mkString("\n")}"
-            else
-              status.getText,
-            IndexedSeq.empty,
-            None,
-            None,
-            IndexedSeq.empty
-          )))
-      }
+            ApiTextMessage(media.getMediaURLHttps, IndexedSeq.empty, None, IndexedSeq.empty, IndexedSeq.empty)
+        })
+        .prepend(Source.single(
+              ApiTextMessage(
+                if (key.quotationRequired)
+                  s"@${status.getUser.getName}:\n${status.getText.split('\n').map("> " + _).mkString("\n")}"
+                else
+                  status.getText,
+                IndexedSeq.empty,
+                None,
+                IndexedSeq.empty,
+                IndexedSeq.empty
+              )))
+    }
 
   private def tweetsSource(bufferSize: Int): Source[Status, ActorRef] =
     Source
@@ -181,9 +166,7 @@ final case class TwitterHub(config: TwitterConfig)(
 
       keys.zipWithIndex.foreach {
         case ((peer, key), index) ⇒
-          bcast
-            .out(index) ~> key.flow ~> unfoldMedia(key) ~> pair(peer) ~> merge
-            .in(index)
+          bcast.out(index) ~> key.flow ~> unfoldMedia(key) ~> pair(peer) ~> merge.in(index)
       }
 
       FlowShape(bcast.in, merge.out)
@@ -194,34 +177,29 @@ final case class TwitterHub(config: TwitterConfig)(
     val hashTagStream = getTwitterStream
     hashTagStream.addListener(Listener(actor))
     hashTagStream.filter(new FilterQuery(tag.rawTag))
-    log.warning("Started stream for key: `{}`", tag.rawTag)
+    log.debug("Started stream for key: `{}`", tag.rawTag)
     system.registerOnTermination { hashTagStream.shutdown() }
   }
 
   private val streamStartDelay = 15.seconds
 
-  private def startHashTagsStreams(
-      actor: ActorRef,
-      hashTags: List[HashTagKey]): FiniteDuration =
+  private def startHashTagsStreams(actor: ActorRef, hashTags: List[HashTagKey]): FiniteDuration =
     hashTags.foldLeft(streamStartDelay) { (accum, key) ⇒
       system.scheduler.scheduleOnce(accum)(startHashTagStream(actor, key))
       accum + streamStartDelay
     }
 
-  private def startUsersStream(actor: ActorRef,
-                               users: List[AccountKey]): Unit = {
+  private def startUsersStream(actor: ActorRef, users: List[AccountKey]): Unit = {
     val usersStream = getTwitterStream
     usersStream.addListener(Listener(actor))
     usersStream.filter(new FilterQuery(users.map(_.userId): _*))
-    log.warning("Started stream for keys: `{}`",
-                users.map(_.account).mkString(","))
+    log.debug("Started stream for keys: `{}`", users.map(_.account).mkString(","))
     system.registerOnTermination { usersStream.shutdown() }
   }
 
   def start(): Unit = {
-    val resolvedKeys = config.repost.toList.map(
-      _.bimap(id ⇒ ApiPeer(ApiPeerType.Group, id.toInt),
-              Key.resolve(_, instance)))
+    val resolvedKeys =
+      config.repost.toList.map(_.bimap(id ⇒ ApiPeer(ApiPeerType.Group, id.toInt), Key.resolve(_, instance)))
     val actor = tweetsSource(resolvedKeys.length * 256)
       .via(keysFlow(resolvedKeys))
       .via(postFlow)
@@ -241,8 +219,7 @@ final case class TwitterHub(config: TwitterConfig)(
       if (users.nonEmpty)
         startUsersStream(actor, users)
       if (hashTags.nonEmpty)
-        system.scheduler.scheduleOnce(streamStartDelay)(
-          startHashTagsStreams(actor, hashTags))
+        system.scheduler.scheduleOnce(streamStartDelay)(startHashTagsStreams(actor, hashTags))
     }
   }
 }

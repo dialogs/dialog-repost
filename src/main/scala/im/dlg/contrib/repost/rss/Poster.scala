@@ -20,10 +20,7 @@ import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 import scala.xml._
 
-final case class RSSItem(pubDate: Instant,
-                         title: String,
-                         description: String,
-                         link: String)
+final case class RSSItem(pubDate: Instant, title: String, description: String, link: String)
 
 object RSSItem {
   val dtFormat: DateTimeFormatter =
@@ -31,12 +28,12 @@ object RSSItem {
 
   def parse(node: Node): Try[RSSItem] =
     Try(
-      RSSItem(
-        ZonedDateTime.parse((node \\ "pubDate").text, dtFormat).toInstant,
-        (node \\ "title").text,
-        (node \\ "description").text,
-        (node \\ "link").text
-      ))
+        RSSItem(
+          ZonedDateTime.parse((node \\ "pubDate").text, dtFormat).toInstant,
+          (node \\ "title").text,
+          (node \\ "description").text,
+          (node \\ "link").text
+        ))
 
   def parseItems(s: String): Try[Seq[RSSItem]] =
     for {
@@ -47,8 +44,7 @@ object RSSItem {
     } yield items
 }
 
-final case class Poster(channelId: Int, interval: FiniteDuration)(
-    implicit val system: ActorSystem)
+final case class Poster(channelId: Int, interval: FiniteDuration)(implicit val system: ActorSystem)
     extends ChannelPoster.Poster {
   private lazy val http = Http(system)
 
@@ -76,13 +72,8 @@ final case class Poster(channelId: Int, interval: FiniteDuration)(
        FutureExt
          .ftraverse(toPost) { item ⇒
            log.debug("Posting `{}` to channel {}", item.title, info.id)
-           val body = StringEscapeUtils.unescapeHtml4(
-             s"${item.title}\n${item.description}") + "\n" + item.link
-           val message = ApiTextMessage(body,
-                                        IndexedSeq.empty,
-                                        None,
-                                        None,
-                                        IndexedSeq.empty)
+           val body = StringEscapeUtils.unescapeHtml4(s"${item.title}\n${item.description}") + "\n" + item.link
+           val message = ApiTextMessage(body, IndexedSeq.empty, None, IndexedSeq.empty, IndexedSeq.empty)
            post(info.creatorUserId, message)
          }
          .map { _ ⇒
@@ -96,11 +87,7 @@ final case class Poster(channelId: Int, interval: FiniteDuration)(
        log.debug("Skipping {} items, because of date constraint", items.length)
        FastFuture.successful(now)
      }).map { nextDate ⇒
-      log.debug(
-        "Last seen date moved from {} to {} after processing of {} items",
-        lastSeen,
-        nextDate,
-        items.length)
+      log.debug("Last seen date moved from {} to {} after processing of {} items", lastSeen, nextDate, items.length)
       nextDate
     }
   }
@@ -130,8 +117,7 @@ case class RSSConfig(interval: FiniteDuration, repost: Map[String, String])
 object RSS extends ChannelPoster.Starter[RSSConfig] {
   override protected def name: String = "rss"
 
-  override def startWithConfig(config: RSSConfig)(
-      implicit system: ActorSystem): Unit =
+  override def startWithConfig(config: RSSConfig)(implicit system: ActorSystem): Unit =
     config.repost.foreach {
       case (chanId, link) ⇒
         Poster(chanId.toInt, config.interval)(system).start(link)
