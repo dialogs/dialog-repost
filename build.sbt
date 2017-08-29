@@ -8,7 +8,7 @@ name := "dialog-repost"
 
 sdkVersion := detectSdkVersion("1.13.0")
 
-version := versionWithSdk("0.0.2", sdkVersion.value)
+version := versionWithSdk("0.0.3", sdkVersion.value)
 
 scalaVersion := "2.11.11"
 

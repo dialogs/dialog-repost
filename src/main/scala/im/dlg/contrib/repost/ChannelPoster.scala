@@ -21,7 +21,8 @@ object ChannelPoster {
   trait Poster extends AnyLogging {
     implicit val system: ActorSystem
     protected val channelId: Int
-    protected implicit val mat: Materializer = DialogRuntime(system).materializer
+    protected implicit val mat
+      : Materializer = DialogRuntime(system).materializer
 
     protected implicit val ec: ExecutionContext = system.dispatcher
 
@@ -30,9 +31,20 @@ object ChannelPoster {
     private final val peer = ApiPeer(ApiPeerType.Group, channelId, None)
     private final val rng = ThreadLocalSecureRandom.current()
 
-    protected def post(userId: Int, msg: ApiMessageContent): Future[SeqStateDate] =
+    protected def post(userId: Int,
+                       msg: ApiMessageContent): Future[SeqStateDate] =
       dialogExt
-        .sendMessage(peer, userId, 0, None, rng.nextLong, msg, None, isFat = false, Set.empty, Set.empty, None)
+        .sendMessage(peer,
+                     userId,
+                     0,
+                     None,
+                     rng.nextLong,
+                     msg,
+                     None,
+                     isFat = false,
+                     Set.empty,
+                     Set.empty,
+                     None)
         .recover {
           case t: Throwable ⇒
             log.error(t, "send message failed")
@@ -57,9 +69,12 @@ object ChannelPoster {
 
     final def configPath: String = s"services.poster.$name"
 
-    final def start(system: ActorSystem)(implicit ev: Configs[ConfigType]): Unit =
+    final def start(system: ActorSystem)(
+        implicit ev: Configs[ConfigType]): Unit =
       if (system.settings.config.hasPath(configPath)) {
-        val config = system.settings.config.get[ConfigType](configPath).valueOrThrow(_.configException)
+        val config = system.settings.config
+          .get[ConfigType](configPath)
+          .valueOrThrow(_.configException)
         system.log.debug("Poster for {} config: {}", name, config)
         startWithConfig(config)(system)
       }
