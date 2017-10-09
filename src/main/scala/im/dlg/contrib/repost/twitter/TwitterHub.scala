@@ -1,6 +1,5 @@
 package im.dlg.contrib.repost.twitter
 
-import akka.NotUsed
 import akka.actor._
 import akka.stream.Supervision.Decider
 import akka.stream.scaladsl._
@@ -10,7 +9,7 @@ import im.dlg.api.rpc.peers.{ApiPeer, ApiPeerType}
 import im.dlg.server.dialog.DialogExtension
 import im.dlg.util.ThreadLocalSecureRandom
 import im.dlg.util.log.AnyLogging
-import im.dlg.util.misc.StringUtils
+import im.dlg.util.misc.CommonStringUtils
 import twitter4j._
 import twitter4j.auth._
 import twitter4j.conf._
@@ -36,9 +35,9 @@ case class AccountKey(account: String, userId: Long) extends Key {
   override val quotationRequired: Boolean = false
 }
 
-object Key {
+object Key extends CommonStringUtils {
   def resolve(raw: String, service: Twitter): Key =
-    StringUtils.withTrimmed(raw) { trimmed ⇒
+    withTrimmed(raw) { trimmed ⇒
       if (trimmed.startsWith("#")) HashTagKey(trimmed)
       else {
         val account = trimmed.dropWhile(_ == "@")
@@ -199,7 +198,7 @@ final case class TwitterHub(config: TwitterConfig)(implicit val system: ActorSys
 
   def start(): Unit = {
     val resolvedKeys =
-      config.repost.toList.map(_.bimap(id ⇒ ApiPeer(ApiPeerType.Group, id.toInt), Key.resolve(_, instance)))
+      config.repost.toList.map(_.bimap(id ⇒ ApiPeer(ApiPeerType.Group, id.toInt, None), Key.resolve(_, instance)))
     val actor = tweetsSource(resolvedKeys.length * 256)
       .via(keysFlow(resolvedKeys))
       .via(postFlow)

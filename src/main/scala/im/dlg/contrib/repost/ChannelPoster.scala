@@ -27,7 +27,7 @@ object ChannelPoster {
 
     private final lazy val dialogExt = DialogExtension(system)
     private final lazy val db = DbExtension(system).db
-    private final val peer = ApiPeer(ApiPeerType.Group, channelId)
+    private final val peer = ApiPeer(ApiPeerType.Group, channelId, None)
     private final val rng = ThreadLocalSecureRandom.current()
 
     protected def post(userId: Int, msg: ApiMessageContent): Future[SeqStateDate] =

@@ -10,11 +10,8 @@ Usage
 In your `build.sbt` file add following line:
 
 ```scala
-libraryDependencies += "im.dlg" %% "dialog-repost" % "0.0.2-sdk_<YOUR-CURRENT-SDK-VERSION>"
+libraryDependencies += "im.dlg" %% "dialog-repost" % withSdkVersion("0.0.2", sdkVersion.value)
 ```
-
-Note that `<YOUR-CURRENT-SDK-VERSION>` should be free of `-SNAPSHOT` suffix even if you are
-developing against an sdk snapshot.
 
 Add following to your configuration file:
 

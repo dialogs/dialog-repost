@@ -1,4 +1,4 @@
-import im.dlg.DialogHouseRules
+import im.dlg.SbtDialogDistributor._
 
 enablePlugins(SbtDialogDistributor)
 
@@ -6,11 +6,11 @@ organization := "im.dlg"
 
 name := "dialog-repost"
 
-sdkVersion := "1.12.1-SNAPSHOT"
+sdkVersion := detectSdkVersion("1.13.0")
 
-version := "0.0.2-sdk_" + sdkVersion.value.replace("-SNAPSHOT", "")
+version := versionWithSdk("0.0.2", sdkVersion.value)
 
-scalaVersion := "2.11.8"
+scalaVersion := "2.11.11"
 
 resolvers += "krasserm at bintray" at "http://dl.bintray.com/krasserm/maven"
 
